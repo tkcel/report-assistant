@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: 'AIを活用してレポート作成を効率化する支援ツール',
 }
 
-export default function RootLayout({
+export function RootLayout({
   children,
 }: {
   children: React.ReactNode
