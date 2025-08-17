@@ -1,44 +1,39 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/Button'
-import { Textarea } from '@/components/ui/Textarea'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/RadioGroup'
+import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/Select'
-import type { Language, WritingStyle, Tone, Quality } from '@/app/types'
+} from "@/components/ui/Select";
+import type { Language, WritingStyle, Tone, Quality } from "@/app/types";
 
 interface SettingsFormProps {
-  onBack: () => void
-  onNext: () => void
+  onBack: () => void;
+  onNext: () => void;
 }
 
 export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
-  const [language, setLanguage] = useState<Language>('日本語')
-  const [writingStyle, setWritingStyle] = useState<WritingStyle>('常体')
-  const [tone, setTone] = useState<Tone>('フォーマル')
-  const [quality, setQuality] = useState<Quality>('中レベル')
-  const [purpose, setPurpose] = useState('')
+  const [language, setLanguage] = useState<Language>("日本語");
+  const [writingStyle, setWritingStyle] = useState<WritingStyle>("常体");
+  const [tone, setTone] = useState<Tone>("フォーマル");
+  const [quality, setQuality] = useState<Quality>("中レベル");
+  const [purpose, setPurpose] = useState("");
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-6">ステップ2: 詳細設定</h2>
-        
+
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-3">
-              言語設定
-            </label>
-            <RadioGroup
-              value={language}
-              onValueChange={(value) => setLanguage(value as Language)}
-            >
+            <label className="block text-sm font-medium mb-3">言語設定</label>
+            <RadioGroup value={language} onValueChange={(value) => setLanguage(value as Language)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="日本語" id="japanese" />
                 <label
@@ -61,9 +56,7 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-3">
-              文体設定
-            </label>
+            <label className="block text-sm font-medium mb-3">文体設定</label>
             <RadioGroup
               value={writingStyle}
               onValueChange={(value) => setWritingStyle(value as WritingStyle)}
@@ -90,9 +83,7 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-3">
-              口調設定
-            </label>
+            <label className="block text-sm font-medium mb-3">口調設定</label>
             <Select value={tone} onValueChange={(value) => setTone(value as Tone)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="口調を選択" />
@@ -108,13 +99,8 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-3">
-              品質設定
-            </label>
-            <RadioGroup
-              value={quality}
-              onValueChange={(value) => setQuality(value as Quality)}
-            >
+            <label className="block text-sm font-medium mb-3">品質設定</label>
+            <RadioGroup value={quality} onValueChange={(value) => setQuality(value as Quality)}>
               <div className="space-y-3">
                 <div className="flex items-start space-x-2">
                   <RadioGroupItem value="高レベル" id="high" className="mt-1" />
@@ -163,9 +149,7 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
-              目的設定（任意）
-            </label>
+            <label className="block text-sm font-medium mb-2">目的設定（任意）</label>
             <Textarea
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
@@ -173,9 +157,7 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
               className="min-h-[100px]"
               maxLength={256}
             />
-            <div className="text-sm text-gray-500 mt-1">
-              {purpose.length} / 256文字
-            </div>
+            <div className="text-sm text-gray-500 mt-1">{purpose.length} / 256文字</div>
           </div>
         </div>
       </div>
@@ -184,10 +166,8 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
         <Button onClick={onBack} variant="outline">
           戻る
         </Button>
-        <Button onClick={onNext}>
-          次へ進む
-        </Button>
+        <Button onClick={onNext}>次へ進む</Button>
       </div>
     </div>
-  )
+  );
 }

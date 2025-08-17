@@ -1,72 +1,66 @@
-import { NextRequest, NextResponse } from 'next/server'
-import type { Paragraph } from '@/app/types'
+import { NextRequest, NextResponse } from "next/server";
+import type { Paragraph } from "@/app/types";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const body = await request.json()
-    const { theme, settings } = body
-    
+    const body = await request.json();
+    const { theme, settings } = body;
+
     // TODO: Mastra エージェントを使用した段落構成の生成
     // 現在はモックデータを返す
     const generatedParagraphs: Paragraph[] = [
       {
-        id: '1',
+        id: "1",
         order: 1,
-        title: '序論',
+        title: "序論",
         description: `${theme}の背景と重要性について説明`,
-        content: '',
+        content: "",
         targetLength: 500,
         actualLength: 0,
-        status: 'draft',
+        status: "draft",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        id: '2',
+        id: "2",
         order: 2,
-        title: '現状分析',
+        title: "現状分析",
         description: `${theme}の現在の状況と課題`,
-        content: '',
+        content: "",
         targetLength: 1000,
         actualLength: 0,
-        status: 'draft',
+        status: "draft",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        id: '3',
+        id: "3",
         order: 3,
-        title: '提案・解決策',
+        title: "提案・解決策",
         description: `${theme}に対する具体的な提案`,
-        content: '',
+        content: "",
         targetLength: 1000,
         actualLength: 0,
-        status: 'draft',
+        status: "draft",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        id: '4',
+        id: "4",
         order: 4,
-        title: '結論',
-        description: 'まとめと今後の展望',
-        content: '',
+        title: "結論",
+        description: "まとめと今後の展望",
+        content: "",
         targetLength: 500,
         actualLength: 0,
-        status: 'draft',
+        status: "draft",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-    ]
-    
-    return NextResponse.json({ paragraphs: generatedParagraphs })
+    ];
+
+    return NextResponse.json({ paragraphs: generatedParagraphs });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to generate structure' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Failed to generate structure" }, { status: 500 });
   }
 }

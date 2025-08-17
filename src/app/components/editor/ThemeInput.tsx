@@ -1,73 +1,73 @@
-'use client'
+"use client";
 
-import { useState, useCallback } from 'react'
-import { Upload, Link, X, FileText } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { Textarea } from '@/components/ui/Textarea'
-import { cn } from '@/lib/utils/cn'
+import { useState, useCallback } from "react";
+import { Upload, Link, X, FileText } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
+import { cn } from "@/lib/utils/cn";
 
 interface ThemeInputProps {
-  onNext: () => void
+  onNext: () => void;
 }
 
 export function ThemeInput({ onNext }: ThemeInputProps) {
-  const [theme, setTheme] = useState('')
-  const [pdfs, setPdfs] = useState<File[]>([])
-  const [links, setLinks] = useState<string[]>([])
-  const [newLink, setNewLink] = useState('')
-  const [isDragging, setIsDragging] = useState(false)
+  const [theme, setTheme] = useState("");
+  const [pdfs, setPdfs] = useState<File[]>([]);
+  const [links, setLinks] = useState<string[]>([]);
+  const [newLink, setNewLink] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    
+    e.preventDefault();
+    setIsDragging(false);
+
     const files = Array.from(e.dataTransfer.files).filter(
-      file => file.type === 'application/pdf' && file.size <= 10 * 1024 * 1024
-    )
-    setPdfs(prev => [...prev, ...files])
-  }, [])
+      (file) => file.type === "application/pdf" && file.size <= 10 * 1024 * 1024,
+    );
+    setPdfs((prev) => [...prev, ...files]);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files).filter(
-        file => file.type === 'application/pdf' && file.size <= 10 * 1024 * 1024
-      )
-      setPdfs(prev => [...prev, ...files])
+        (file) => file.type === "application/pdf" && file.size <= 10 * 1024 * 1024,
+      );
+      setPdfs((prev) => [...prev, ...files]);
     }
-  }
+  };
 
   const removePdf = (index: number) => {
-    setPdfs(prev => prev.filter((_, i) => i !== index))
-  }
+    setPdfs((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const addLink = () => {
     if (newLink && links.length < 5 && !links.includes(newLink)) {
-      setLinks(prev => [...prev, newLink])
-      setNewLink('')
+      setLinks((prev) => [...prev, newLink]);
+      setNewLink("");
     }
-  }
+  };
 
   const removeLink = (index: number) => {
-    setLinks(prev => prev.filter((_, i) => i !== index))
-  }
+    setLinks((prev) => prev.filter((_, i) => i !== index));
+  };
 
-  const isValid = theme.trim().length > 0 && theme.length <= 256
+  const isValid = theme.trim().length > 0 && theme.length <= 256;
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-6">ステップ1: テーマ設定</h2>
-        
+
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">
@@ -80,9 +80,7 @@ export function ThemeInput({ onNext }: ThemeInputProps) {
               className="min-h-[100px]"
               maxLength={256}
             />
-            <div className="text-sm text-gray-500 mt-1">
-              {theme.length} / 256文字
-            </div>
+            <div className="text-sm text-gray-500 mt-1">{theme.length} / 256文字</div>
           </div>
 
           <div>
@@ -92,16 +90,14 @@ export function ThemeInput({ onNext }: ThemeInputProps) {
             <div
               className={cn(
                 "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
-                isDragging ? "border-primary bg-primary/5" : "border-gray-300"
+                isDragging ? "border-primary bg-primary/5" : "border-gray-300",
               )}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
               <Upload className="mx-auto h-12 w-12 text-gray-400" />
-              <p className="mt-2 text-sm text-gray-600">
-                ドラッグ&ドロップまたは
-              </p>
+              <p className="mt-2 text-sm text-gray-600">ドラッグ&ドロップまたは</p>
               <label className="mt-2 cursor-pointer">
                 <span className="text-primary hover:underline">ファイルを選択</span>
                 <input
@@ -112,15 +108,16 @@ export function ThemeInput({ onNext }: ThemeInputProps) {
                   onChange={handleFileChange}
                 />
               </label>
-              <p className="text-xs text-gray-500 mt-1">
-                PDF形式、最大10MB
-              </p>
+              <p className="text-xs text-gray-500 mt-1">PDF形式、最大10MB</p>
             </div>
-            
+
             {pdfs.length > 0 && (
               <div className="mt-4 space-y-2">
                 {pdfs.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                  >
                     <div className="flex items-center">
                       <FileText className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="text-sm">{file.name}</span>
@@ -153,20 +150,19 @@ export function ThemeInput({ onNext }: ThemeInputProps) {
                 className="flex-1 px-3 py-2 border rounded-md"
                 disabled={links.length >= 5}
               />
-              <Button
-                onClick={addLink}
-                disabled={!newLink || links.length >= 5}
-                variant="outline"
-              >
+              <Button onClick={addLink} disabled={!newLink || links.length >= 5} variant="outline">
                 <Link className="h-4 w-4 mr-2" />
                 追加
               </Button>
             </div>
-            
+
             {links.length > 0 && (
               <div className="mt-4 space-y-2">
                 {links.map((link, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                  >
                     <a
                       href={link}
                       target="_blank"
@@ -195,5 +191,5 @@ export function ThemeInput({ onNext }: ThemeInputProps) {
         </Button>
       </div>
     </div>
-  )
+  );
 }

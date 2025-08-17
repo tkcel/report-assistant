@@ -30,9 +30,7 @@ export const authOptions: NextAuthOptions = {
 
       if (isExpired) {
         try {
-          const newIdToken = await fetchNewIdToken(
-            token.refreshToken as string
-          );
+          const newIdToken = await fetchNewIdToken(token.refreshToken as string);
           token.idToken = newIdToken;
         } catch (error) {
           console.error("Error refreshing token:", error);
@@ -94,7 +92,7 @@ const fetchNewIdToken = async (refreshToken: string) => {
         grant_type: "refresh_token",
         refreshToken,
       }),
-    }
+    },
   );
 
   const { id_token } = await res.json();

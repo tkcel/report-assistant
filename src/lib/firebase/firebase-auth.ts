@@ -1,9 +1,6 @@
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { firebaseAuth } from "./firebase";
-import {
-  signIn as signInWithNextAuth,
-  signOut as signOutWithNextAuth,
-} from "next-auth/react";
+import { signIn as signInWithNextAuth, signOut as signOutWithNextAuth } from "next-auth/react";
 
 export function logInWithFirebaseAuth() {
   const provider = new GoogleAuthProvider();
