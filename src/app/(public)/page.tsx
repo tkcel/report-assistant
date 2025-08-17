@@ -192,6 +192,7 @@ const Page = () => {
                       setVerificationSent(false);
                       setVerificationEmail("");
                       setError("");
+                      setIsSignUp(false); // ログイン画面に戻る際はログインモードに設定
                     }}
                     className="w-full text-center text-sm text-blue-600 hover:text-blue-700"
                   >

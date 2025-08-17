@@ -23,19 +23,13 @@ export function logInWithGoogleAuthProvider() {
 
         if (!userResult.success) {
           // ユーザーデータが存在しない場合は作成
-          const firestoreResult = await createUserInFirestore(user.uid, {
+          await createUserInFirestore(user.uid, {
             name: user.displayName || "",
             email: user.email || "",
-            emailVerified: user.emailVerified,
             photoURL: user.photoURL || undefined,
           });
 
-          if (!firestoreResult.success) {
-            console.error(
-              "Failed to create user in Firestore during Google sign-in:",
-              firestoreResult.error,
-            );
-          }
+          // Firestoreへの保存に失敗してもログインは続行
         }
 
         const refreshToken = user.refreshToken;
@@ -47,9 +41,7 @@ export function logInWithGoogleAuthProvider() {
         });
       }
     })
-    .catch((error) => {
-      console.error("Error Sing In with Google", error);
-    });
+    .catch((error) => {});
 }
 
 export function logOutWithFirebaseAuth() {
@@ -58,9 +50,7 @@ export function logOutWithFirebaseAuth() {
     .then(() => {
       signOutWithNextAuth({ callbackUrl: `/` }); //ログアウト後に遷移する画面の指
     })
-    .catch((error) => {
-      console.error("Error Sign Out with Google", error);
-    });
+    .catch((error) => {});
 }
 
 export async function signUpWithEmailAndPassword(
@@ -78,15 +68,12 @@ export async function signUpWithEmailAndPassword(
     }
 
     // Firestoreにユーザー情報を保存
-    const firestoreResult = await createUserInFirestore(user.uid, {
+    await createUserInFirestore(user.uid, {
       name: displayName || "",
       email: user.email || "",
-      emailVerified: false,
     });
 
-    if (!firestoreResult.success) {
-      console.error("Failed to create user in Firestore:", firestoreResult.error);
-    }
+    // Firestoreへの保存に失敗してもサインアップは続行
 
     // メール確認を送信
     await sendEmailVerification(user);
@@ -98,8 +85,6 @@ export async function signUpWithEmailAndPassword(
       email: user.email,
     };
   } catch (error: any) {
-    console.error("Error creating account:", error);
-
     // エラーメッセージを日本語にマッピング
     let errorMessage = "アカウント作成に失敗しました";
     if (error.code === "auth/email-already-in-use") {
@@ -144,15 +129,12 @@ export async function signInWithEmailPassword(email: string, password: string) {
 
     if (!userResult.success) {
       // ユーザーデータが存在しない場合は作成
-      const firestoreResult = await createUserInFirestore(user.uid, {
+      await createUserInFirestore(user.uid, {
         name: user.displayName || "",
         email: user.email || "",
-        emailVerified: user.emailVerified,
       });
 
-      if (!firestoreResult.success) {
-        console.error("Failed to create user in Firestore during sign-in:", firestoreResult.error);
-      }
+      // Firestoreへの保存に失敗してもログインは続行
     }
 
     // メール確認済みの場合のみセッションを作成
@@ -167,8 +149,6 @@ export async function signInWithEmailPassword(email: string, password: string) {
 
     return { success: true };
   } catch (error: any) {
-    console.error("Error signing in:", error);
-
     // エラーメッセージを日本語にマッピング
     let errorMessage = "ログインに失敗しました";
     if (error.code === "auth/user-not-found") {
@@ -196,7 +176,6 @@ export async function resendVerificationEmail() {
     }
     return { success: false, error: "ユーザーが見つかりません" };
   } catch (error: any) {
-    console.error("Error resending verification email:", error);
     return { success: false, error: "確認メールの送信に失敗しました" };
   }
 }

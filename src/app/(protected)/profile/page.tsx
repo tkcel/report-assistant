@@ -53,7 +53,6 @@ export default function ProfilePage() {
         alert(result.error || "プロフィールの更新に失敗しました");
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
       alert("プロフィールの更新中にエラーが発生しました");
     } finally {
       setLoading(false);

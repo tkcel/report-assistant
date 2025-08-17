@@ -47,7 +47,6 @@ export default function ProfileCheckWrapper({ children }: ProfileCheckWrapperPro
         router.push("/profile");
       }
     } catch (error) {
-      console.error("Error checking profile:", error);
       setIsChecking(false);
     }
   }, [session, router]);

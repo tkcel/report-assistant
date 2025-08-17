@@ -76,7 +76,6 @@ export interface User {
   uid: string; // Firebase Authentication の uid
   name: string;
   email: string;
-  emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
   phoneNumber?: string;
