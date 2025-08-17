@@ -10,11 +10,5 @@ service cloud.firestore {
       // 新規作成時は、作成するユーザーのUIDと一致している必要がある
       allow create: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // ReportProjectコレクションのルール（将来的に使用）
-    match /projects/{projectId} {
-      // 認証されたユーザーのみアクセス可能
-      allow read, write: if request.auth != null;
-    }
   }
 }
