@@ -401,13 +401,9 @@ const Page = () => {
             <a href="#" className="hover:text-gray-900 transition-colors">
               プライバシーポリシー
             </a>
-            <span className="text-gray-300">|</span>
-            <a href="#" className="hover:text-gray-900 transition-colors">
-              ヘルプ
-            </a>
           </div>
           <p className="mt-4 text-xs text-gray-500">
-            © 2024 レポートアシスタント. All rights reserved.
+            © 2025 レポートアシスタント. All rights reserved.
           </p>
         </div>
       </div>

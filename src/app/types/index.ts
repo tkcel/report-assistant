@@ -71,3 +71,65 @@ export interface ReferenceLink {
   favicon?: string;
   addedAt: Date;
 }
+
+export interface User {
+  uid: string; // Firebase Authentication の uid
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  phoneNumber?: string;
+  photoURL?: string;
+  sex?: "男性" | "女性" | "未回答";
+  schoolType?: "大学" | "大学院" | "高専" | "短大" | "専門学校" | "高等学校" | "その他";
+  schoolName?: string;
+  schoolDepartment?: string; // ex. 理工学部/経済学部
+  schoolMajor?: string; // ex. 理工学類/経済学類
+  schoolGraduationYear?: number; // ex. 26年/27年
+  schoolGraduationMonth?: number; // ex. 3月/9月
+  selfPr?: string;
+  interestedIndustries?: (
+    | "IT・通信・インターネット"
+    | "メーカー"
+    | "商社"
+    | "サービス・レジャー"
+    | "流通・小売・フード"
+    | "マスコミ・広告・デザイン"
+    | "金融・保険"
+    | "コンサルティング"
+    | "不動産・建築・設備"
+    | "環境・エネルギー"
+    | "公的機関"
+    | "該当なし"
+  )[];
+  interestedJobTypes?: (
+    | "戦略・総合コンサルタント"
+    | "システム・ITコンサルタント"
+    | "トレーダー・ディーラー"
+    | "経営企画・事業企画"
+    | "調査・マーケティング"
+    | "商品企画・プランニング"
+    | "宣伝・広報"
+    | "総務・人事・労務"
+    | "経理・財務・会計"
+    | "法務"
+    | "ディレクター・プロデューサー"
+    | "webエンジニア"
+    | "データサイエンティスト"
+    | "SE"
+    | "スマホアプリエンジニア"
+    | "機械学習エンジニア"
+    | "基礎研究・応用研究"
+    | "機械・電気・電子機器設計"
+    | "一般営業"
+    | "技術営業・システム営業"
+    | "ゲームクリエイター"
+    | "UI・UXデザイナー"
+    | "編集・制作"
+    | "総合職"
+    | "公務員"
+    | "薬剤師"
+    | "該当なし"
+  )[];
+}

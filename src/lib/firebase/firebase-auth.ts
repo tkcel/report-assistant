@@ -9,6 +9,7 @@ import {
 } from "firebase/auth";
 import { firebaseAuth } from "./firebase";
 import { signIn as signInWithNextAuth, signOut as signOutWithNextAuth } from "next-auth/react";
+import { createUserInFirestore } from "./firestore-users";
 
 export function logInWithGoogleAuthProvider() {
   const provider = new GoogleAuthProvider();
@@ -16,6 +17,27 @@ export function logInWithGoogleAuthProvider() {
   signInWithPopup(firebaseAuth, provider)
     .then(async ({ user }) => {
       if (user) {
+        // Firestoreにユーザーデータが存在するか確認、なければ作成
+        const { getUserFromFirestore } = await import("./firestore-users");
+        const userResult = await getUserFromFirestore(user.uid);
+
+        if (!userResult.success) {
+          // ユーザーデータが存在しない場合は作成
+          const firestoreResult = await createUserInFirestore(user.uid, {
+            name: user.displayName || "",
+            email: user.email || "",
+            emailVerified: user.emailVerified,
+            photoURL: user.photoURL || undefined,
+          });
+
+          if (!firestoreResult.success) {
+            console.error(
+              "Failed to create user in Firestore during Google sign-in:",
+              firestoreResult.error,
+            );
+          }
+        }
+
         const refreshToken = user.refreshToken;
         const idToken = await user.getIdToken();
         await signInWithNextAuth("credentials", {
@@ -53,6 +75,17 @@ export async function signUpWithEmailAndPassword(
     // ユーザー名を設定
     if (displayName) {
       await updateProfile(user, { displayName });
+    }
+
+    // Firestoreにユーザー情報を保存
+    const firestoreResult = await createUserInFirestore(user.uid, {
+      name: displayName || "",
+      email: user.email || "",
+      emailVerified: false,
+    });
+
+    if (!firestoreResult.success) {
+      console.error("Failed to create user in Firestore:", firestoreResult.error);
     }
 
     // メール確認を送信
@@ -102,6 +135,23 @@ export async function signInWithEmailPassword(email: string, password: string) {
           email: user.email,
           error: "メールアドレスの確認が必要です。確認メールをご確認ください。",
         };
+      }
+    }
+
+    // Firestoreにユーザーデータが存在するか確認、なければ作成
+    const { getUserFromFirestore } = await import("./firestore-users");
+    const userResult = await getUserFromFirestore(user.uid);
+
+    if (!userResult.success) {
+      // ユーザーデータが存在しない場合は作成
+      const firestoreResult = await createUserInFirestore(user.uid, {
+        name: user.displayName || "",
+        email: user.email || "",
+        emailVerified: user.emailVerified,
+      });
+
+      if (!firestoreResult.success) {
+        console.error("Failed to create user in Firestore during sign-in:", firestoreResult.error);
       }
     }
 
