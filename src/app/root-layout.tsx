@@ -13,7 +13,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
       <body className={inter.className}>
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
           <main className="w-full">{children}</main>
         </div>
       </body>
