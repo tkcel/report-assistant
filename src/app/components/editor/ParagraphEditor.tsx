@@ -1,20 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Trash2,
   GripVertical,
   RefreshCw,
-  Download,
   ChevronUp,
   ChevronDown,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
 import type { Paragraph } from "@/app/types";
 import { useReportStore } from "@/app/store/useReportStore";
 import { generateParagraphStructure } from "@/app/services/ai/generateParagraphStructure";
+import { generateFullReport } from "@/app/services/ai/generateParagraphContent";
+import { GeneratingModal } from "@/app/components/common/GeneratingModal";
 import {
   DndContext,
   closestCenter,
@@ -145,12 +148,6 @@ function SortableItem({
                 className="w-20 px-2 py-1 text-sm border rounded"
               />
             </div>
-
-            {paragraph.content.length > 0 && (
-              <span className="text-sm text-green-600">
-                生成済み ({paragraph.content.length}文字)
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -159,6 +156,7 @@ function SortableItem({
 }
 
 export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
+  const router = useRouter();
   const {
     theme,
     settings,
@@ -173,6 +171,7 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
 
   const [paragraphs, setParagraphs] = useState<Paragraph[]>(storeParagraphs);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
   useEffect(() => {
     if (storeParagraphs.length === 0) {
@@ -319,7 +318,48 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
   };
 
   const generateContent = async () => {
-    // TODO: AI によるコンテンツ生成
+    if (paragraphs.length === 0) {
+      alert("段落構成を先に作成してください");
+      return;
+    }
+
+    setIsGeneratingContent(true);
+
+    try {
+      // 全段落を一度に生成
+      const response = await generateFullReport({
+        theme,
+        settings,
+        paragraphs,
+        pdfs: pdfs.map((pdf) => ({
+          name: pdf.name,
+          // contentは実際にはPDF解析が必要
+        })),
+        links: links.map((link) => link.url),
+      });
+
+      // 生成された内容で段落を更新
+      const updatedParagraphs = paragraphs.map((p) => {
+        const generated = response.paragraphs.find((g) => g.id === p.id);
+        if (generated) {
+          return {
+            ...p,
+            content: generated.content,
+          };
+        }
+        return p;
+      });
+
+      setParagraphs(updatedParagraphs);
+      setStoreParagraphs(updatedParagraphs);
+
+      // 生成完了後、編集ページへ遷移
+      router.push("/protected-page/edit");
+    } catch (error) {
+      console.error("コンテンツ生成に失敗しました:", error);
+      alert("コンテンツの生成に失敗しました。もう一度お試しください。");
+      setIsGeneratingContent(false);
+    }
   };
 
   return (
@@ -401,16 +441,14 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
         <Button onClick={onBack} variant="outline">
           戻る
         </Button>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            プロンプトをエクスポート
-          </Button>
-          <Button onClick={generateContent} disabled={paragraphs.length === 0}>
-            AIでレポートを生成✨
-          </Button>
-        </div>
+        <Button onClick={generateContent} disabled={paragraphs.length === 0 || isGeneratingContent}>
+          <Sparkles className="h-4 w-4 mr-2" />
+          AIでレポートを生成✨
+        </Button>
       </div>
+
+      {/* 生成中モーダル */}
+      <GeneratingModal isOpen={isGeneratingContent} totalSteps={paragraphs.length} />
     </div>
   );
 }

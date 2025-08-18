@@ -1,4 +1,9 @@
 import type { Paragraph, ReportSettings } from "@/app/types";
+import { geminiFlashModel } from "@/lib/firebase/ai";
+import {
+  createParagraphContentPrompt,
+  createFullReportPrompt,
+} from "./prompts/paragraphContentPrompt";
 
 interface GenerateParagraphContentRequest {
   theme: string;
@@ -11,6 +16,21 @@ interface GenerateParagraphContentRequest {
 
 interface GenerateParagraphContentResponse {
   content: string;
+}
+
+interface GenerateFullReportRequest {
+  theme: string;
+  settings: ReportSettings;
+  paragraphs: Paragraph[];
+  pdfs?: Array<{ name: string; content?: string }>;
+  links?: string[];
+}
+
+interface GenerateFullReportResponse {
+  paragraphs: Array<{
+    id: string;
+    content: string;
+  }>;
 }
 
 const generateMockContent = (
@@ -103,15 +123,154 @@ export async function generateParagraphContentMock(
   };
 }
 
+// 単一段落の内容を生成
+export async function generateParagraphContentWithAI(
+  request: GenerateParagraphContentRequest,
+): Promise<GenerateParagraphContentResponse> {
+  const { theme, settings, paragraph, allParagraphs, pdfs, links } = request;
+
+  try {
+    // 既に生成された内容を収集
+    const previousContent = allParagraphs
+      .filter((p) => p.order < paragraph.order && p.content)
+      .map((p) => p.content);
+
+    // プロンプトを作成
+    const prompt = createParagraphContentPrompt(
+      theme,
+      settings,
+      paragraph,
+      allParagraphs,
+      previousContent,
+      pdfs,
+      links,
+    );
+
+    // Firebase AI Logicを使用して生成
+    const result = await geminiFlashModel.generateContent(prompt);
+    const response = result.response;
+    const content = response.text();
+
+    return {
+      content: content.trim(),
+    };
+  } catch (error) {
+    console.error("AI generation failed:", error);
+    // エラー時はモック関数にフォールバック
+    return generateParagraphContentMock(request);
+  }
+}
+
+// 全段落を一度に生成
+export async function generateFullReportWithAI(
+  request: GenerateFullReportRequest,
+): Promise<GenerateFullReportResponse> {
+  const { theme, settings, paragraphs, pdfs, links } = request;
+
+  try {
+    // プロンプトを作成
+    const prompt = createFullReportPrompt(theme, settings, paragraphs, pdfs, links);
+
+    // Firebase AI Logicを使用して生成
+    const result = await geminiFlashModel.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
+
+    // JSONレスポンスをパース
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+    const jsonString = jsonMatch ? jsonMatch[1] : text;
+    const parsed = JSON.parse(jsonString);
+
+    if (parsed.paragraphs && Array.isArray(parsed.paragraphs)) {
+      return {
+        paragraphs: parsed.paragraphs,
+      };
+    }
+
+    throw new Error("Invalid response format");
+  } catch (error) {
+    console.error("AI generation failed:", error);
+    // エラー時は各段落を個別に生成
+    const generatedParagraphs = [];
+    for (const paragraph of paragraphs) {
+      try {
+        const result = await generateParagraphContentWithAI({
+          theme,
+          settings,
+          paragraph,
+          allParagraphs: paragraphs,
+          pdfs,
+          links,
+        });
+        generatedParagraphs.push({
+          id: paragraph.id,
+          content: result.content,
+        });
+      } catch (err) {
+        // 個別エラー時はモックを使用
+        const mockResult = await generateParagraphContentMock({
+          theme,
+          settings,
+          paragraph,
+          allParagraphs: paragraphs,
+          pdfs,
+          links,
+        });
+        generatedParagraphs.push({
+          id: paragraph.id,
+          content: mockResult.content,
+        });
+      }
+    }
+    return {
+      paragraphs: generatedParagraphs,
+    };
+  }
+}
+
 export async function generateParagraphContent(
   request: GenerateParagraphContentRequest,
 ): Promise<GenerateParagraphContentResponse> {
-  // TODO: 実際のFirebase Functions呼び出しに置き換える
-  // const functions = getFunctions();
-  // const generateContent = httpsCallable(functions, 'generateParagraphContent');
-  // const result = await generateContent(request);
-  // return result.data as GenerateParagraphContentResponse;
+  const useAI = process.env.NEXT_PUBLIC_USE_AI !== "false";
 
-  // 現在はモック関数を使用
-  return generateParagraphContentMock(request);
+  if (useAI) {
+    try {
+      return await generateParagraphContentWithAI(request);
+    } catch (error) {
+      console.warn("Falling back to mock implementation due to AI error:", error);
+      return generateParagraphContentMock(request);
+    }
+  } else {
+    return generateParagraphContentMock(request);
+  }
+}
+
+export async function generateFullReport(
+  request: GenerateFullReportRequest,
+): Promise<GenerateFullReportResponse> {
+  const useAI = process.env.NEXT_PUBLIC_USE_AI !== "false";
+
+  if (useAI) {
+    return await generateFullReportWithAI(request);
+  } else {
+    // モック実装
+    const generatedParagraphs = [];
+    for (const paragraph of request.paragraphs) {
+      const mockResult = await generateParagraphContentMock({
+        theme: request.theme,
+        settings: request.settings,
+        paragraph,
+        allParagraphs: request.paragraphs,
+        pdfs: request.pdfs,
+        links: request.links,
+      });
+      generatedParagraphs.push({
+        id: paragraph.id,
+        content: mockResult.content,
+      });
+    }
+    return {
+      paragraphs: generatedParagraphs,
+    };
+  }
 }

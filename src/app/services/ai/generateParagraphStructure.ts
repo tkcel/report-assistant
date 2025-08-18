@@ -1,4 +1,6 @@
 import type { Paragraph, ReportSettings, Quality } from "@/app/types";
+import { geminiFlashModel } from "@/lib/firebase/ai";
+import { createParagraphStructurePrompt } from "./prompts/paragraphStructurePrompt";
 
 interface GenerateParagraphStructureRequest {
   theme: string;
@@ -10,6 +12,12 @@ interface GenerateParagraphStructureRequest {
 interface GenerateParagraphStructureResponse {
   paragraphs: Paragraph[];
   totalEstimatedLength: number;
+}
+
+interface ParagraphStructureItem {
+  title: string;
+  description: string;
+  targetLengthWeight: number;
 }
 
 const getQualityMultiplier = (quality: Quality): number => {
@@ -25,6 +33,7 @@ const getQualityMultiplier = (quality: Quality): number => {
   }
 };
 
+// AIの応答がミスった時のフォールバック用
 const generateParagraphTitleAndDescription = (
   theme: string,
   quality: Quality,
@@ -33,7 +42,6 @@ const generateParagraphTitleAndDescription = (
   description: string;
   targetLengthWeight: number;
 }> => {
-  // TODO: 以下モック。AIを使った実装に変える。
   if (quality === "高レベル") {
     return [
       {
@@ -116,7 +124,69 @@ const calculateTargetLength = (quality: Quality, targetLengthWeight: number): nu
   return Math.round(baseLength * targetLengthWeight * qualityMultiplier);
 };
 
-export async function generateParagraphStructure(
+const parseAIResponse = (responseText: string): ParagraphStructureItem[] => {
+  try {
+    // JSONコードブロックを抽出
+    const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+    const jsonString = jsonMatch ? jsonMatch[1] : responseText;
+
+    const parsed = JSON.parse(jsonString);
+
+    if (parsed.paragraphs && Array.isArray(parsed.paragraphs)) {
+      return parsed.paragraphs;
+    }
+
+    throw new Error("Invalid response format");
+  } catch (error) {
+    console.error("Failed to parse AI response:", error);
+    throw new Error("AIレスポンスの解析に失敗しました");
+  }
+};
+
+export async function generateParagraphStructureWithAI(
+  request: GenerateParagraphStructureRequest,
+): Promise<GenerateParagraphStructureResponse> {
+  const { theme, settings, pdfs, links } = request;
+
+  try {
+    // プロンプトを作成
+    const prompt = createParagraphStructurePrompt(theme, settings, pdfs, links);
+
+    // Firebase AI Logicを使用して生成
+    const result = await geminiFlashModel.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
+
+    // レスポンスを解析
+    const paragraphStructure = parseAIResponse(text);
+
+    // Paragraph型に変換
+    const paragraphs: Paragraph[] = paragraphStructure.map(
+      ({ title, description, targetLengthWeight }, index) => ({
+        id: `generated-${Date.now()}-${index}`,
+        order: index + 1,
+        title,
+        description,
+        content: "",
+        targetLength: calculateTargetLength(settings.quality, targetLengthWeight),
+      }),
+    );
+
+    const totalEstimatedLength = paragraphs.reduce((sum, p) => sum + p.targetLength, 0);
+
+    return {
+      paragraphs,
+      totalEstimatedLength,
+    };
+  } catch (error) {
+    console.error("AI generation failed:", error);
+    // エラー時はモック関数にフォールバック
+    return generateParagraphStructureMock(request);
+  }
+}
+
+// モック実装（フォールバック用）
+export async function generateParagraphStructureMock(
   request: GenerateParagraphStructureRequest,
 ): Promise<GenerateParagraphStructureResponse> {
   await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -141,4 +211,23 @@ export async function generateParagraphStructure(
     paragraphs,
     totalEstimatedLength,
   };
+}
+
+// エクスポートする関数（環境に応じて切り替え）
+export async function generateParagraphStructure(
+  request: GenerateParagraphStructureRequest,
+): Promise<GenerateParagraphStructureResponse> {
+  // 環境変数でAIの有効/無効を切り替え可能にする
+  const useAI = process.env.NEXT_PUBLIC_USE_AI !== "false";
+
+  if (useAI) {
+    try {
+      return await generateParagraphStructureWithAI(request);
+    } catch (error) {
+      console.warn("Falling back to mock implementation due to AI error:", error);
+      return generateParagraphStructureMock(request);
+    }
+  } else {
+    return generateParagraphStructureMock(request);
+  }
 }
