@@ -17,7 +17,8 @@ export const firebaseApp = initializeApp(firebaseConfig);
 
 // App Checkを有効化
 initializeAppCheck(firebaseApp, {
-  provider: new ReCaptchaEnterpriseProvider(process.env.NEXT_PUBLIC_SITE_KEY as string),
+  // XXX: 環境変数使うとundefinedの可能性があるのでベタガキしている。多分大丈夫なはず...？
+  provider: new ReCaptchaEnterpriseProvider("6LcHp6krAAAAAD9KaL9qnrHX4zINrHiZPz1BS7rB"),
   isTokenAutoRefreshEnabled: true, // Set to true to allow auto-refresh.
 });
 
