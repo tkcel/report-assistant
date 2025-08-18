@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
 import type { Paragraph } from "@/app/types";
 import { useReportStore } from "@/app/store/useReportStore";
+import { generateParagraphStructure } from "@/app/services/ai/generateParagraphStructure";
 import {
   DndContext,
   closestCenter,
@@ -145,15 +146,11 @@ function SortableItem({
               />
             </div>
 
-            {paragraph.status === "completed" && (
+            {paragraph.content.length > 0 && (
               <span className="text-sm text-green-600">
-                生成済み ({paragraph.actualLength}文字)
+                生成済み ({paragraph.content.length}文字)
               </span>
             )}
-            {paragraph.status === "generating" && (
-              <span className="text-sm text-blue-600">生成中...</span>
-            )}
-            {paragraph.status === "error" && <span className="text-sm text-red-600">エラー</span>}
           </div>
         </div>
       </div>
@@ -163,6 +160,10 @@ function SortableItem({
 
 export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
   const {
+    theme,
+    settings,
+    pdfs,
+    links,
     paragraphs: storeParagraphs,
     setParagraphs: setStoreParagraphs,
     addParagraph: addStoreParagraph,
@@ -183,10 +184,6 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
           description: "レポートの背景と目的を説明",
           content: "",
           targetLength: 500,
-          actualLength: 0,
-          status: "draft",
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           id: "2",
@@ -195,10 +192,6 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
           description: "主要な論点と分析",
           content: "",
           targetLength: 1500,
-          actualLength: 0,
-          status: "draft",
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           id: "3",
@@ -207,10 +200,6 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
           description: "まとめと今後の展望",
           content: "",
           targetLength: 500,
-          actualLength: 0,
-          status: "draft",
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
       ];
       setParagraphs(defaultParagraphs);
@@ -236,7 +225,7 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
   );
 
   const totalTargetLength = paragraphs.reduce((sum, p) => sum + p.targetLength, 0);
-  const totalActualLength = paragraphs.reduce((sum, p) => sum + p.actualLength, 0);
+  const totalActualLength = paragraphs.reduce((sum, p) => sum + p.content.length, 0);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -279,10 +268,6 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
       description: "",
       content: "",
       targetLength: 500,
-      actualLength: 0,
-      status: "draft",
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
     const newParagraphs = [...paragraphs, newParagraph];
     setParagraphs(newParagraphs);
@@ -299,18 +284,38 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
   };
 
   const updateParagraph = (id: string, updates: Partial<Paragraph>) => {
-    const updatedParagraphs = paragraphs.map((p) =>
-      p.id === id ? { ...p, ...updates, updatedAt: new Date() } : p,
-    );
+    const updatedParagraphs = paragraphs.map((p) => (p.id === id ? { ...p, ...updates } : p));
     setParagraphs(updatedParagraphs);
   };
 
   const generateStructure = async () => {
+    console.log("theme", theme);
+    console.log("settings", settings);
+    console.log("pdfs", pdfs);
+    console.log("links", links);
     setIsGenerating(true);
-    // TODO: AI による段落構成の生成
-    setTimeout(() => {
+
+    try {
+      const response = await generateParagraphStructure({
+        theme,
+        settings,
+        pdfs: pdfs.map((pdf) => ({
+          name: pdf.name,
+          size: pdf.size,
+        })),
+        links: links.map((link) => link.url),
+      });
+
+      console.log("response", response);
+
+      setParagraphs(response.paragraphs);
+      setStoreParagraphs(response.paragraphs);
+    } catch (error) {
+      console.error("段落構成の生成に失敗しました:", error);
+      // TODO: エラーハンドリング（トースト通知など）
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   const generateContent = async () => {
@@ -353,7 +358,8 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
         <div className="flex justify-between mb-4">
           <Button onClick={generateStructure} disabled={isGenerating} variant="outline">
             <RefreshCw className={cn("h-4 w-4 mr-2", isGenerating && "animate-spin")} />
-            構成を自動生成
+            構成をAIで自動生成する✨
+            <span className="text-[10px] text-gray-500">※ 現在の段落は上書きされます</span>
           </Button>
           <Button onClick={addParagraph} disabled={paragraphs.length >= 10} variant="outline">
             <Plus className="h-4 w-4 mr-2" />
@@ -398,10 +404,10 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
         <div className="flex gap-2">
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
-            エクスポート
+            プロンプトをエクスポート
           </Button>
           <Button onClick={generateContent} disabled={paragraphs.length === 0}>
-            レポートを生成
+            AIでレポートを生成✨
           </Button>
         </div>
       </div>

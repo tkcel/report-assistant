@@ -13,7 +13,7 @@ const GeneratePage = () => {
   return (
     <div className="w-full">
       <Header />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 sm:pb-6 lg:pb-16">
         <div className="w-full justify-center items-center p-6 mb-8">
           <StepIndicator currentStep={currentStep} />
         </div>

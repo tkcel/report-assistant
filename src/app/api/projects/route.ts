@@ -31,12 +31,9 @@ export async function POST(request: NextRequest) {
         quality: "中レベル",
       },
       paragraphs: [],
-      totalTargetLength: 0,
-      totalActualLength: 0,
       maxTotalLength: 30000,
       createdAt: new Date(),
       updatedAt: new Date(),
-      status: "draft",
     };
 
     projects.push(newProject);

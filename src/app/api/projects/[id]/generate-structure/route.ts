@@ -16,10 +16,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         description: `${theme}の背景と重要性について説明`,
         content: "",
         targetLength: 500,
-        actualLength: 0,
-        status: "draft",
-        createdAt: new Date(),
-        updatedAt: new Date(),
       },
       {
         id: "2",
@@ -28,10 +24,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         description: `${theme}の現在の状況と課題`,
         content: "",
         targetLength: 1000,
-        actualLength: 0,
-        status: "draft",
-        createdAt: new Date(),
-        updatedAt: new Date(),
       },
       {
         id: "3",
@@ -40,10 +32,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         description: `${theme}に対する具体的な提案`,
         content: "",
         targetLength: 1000,
-        actualLength: 0,
-        status: "draft",
-        createdAt: new Date(),
-        updatedAt: new Date(),
       },
       {
         id: "4",
@@ -52,10 +40,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         description: "まとめと今後の展望",
         content: "",
         targetLength: 500,
-        actualLength: 0,
-        status: "draft",
-        createdAt: new Date(),
-        updatedAt: new Date(),
       },
     ];
 

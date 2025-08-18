@@ -10,8 +10,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const generatedContent = paragraphs.map((paragraph: any) => ({
       ...paragraph,
       content: `これは「${paragraph.title}」の生成されたコンテンツです。${theme}について${paragraph.targetLength}文字程度で説明します。`,
-      actualLength: paragraph.targetLength,
-      status: "completed",
     }));
 
     // マークダウン形式の完全なレポートを生成

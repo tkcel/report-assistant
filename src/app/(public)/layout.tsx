@@ -7,7 +7,7 @@ import { RootLayout } from "../root-layout";
 const Layout = async ({ children }: { children: ReactElement }) => {
   const session = await getServerSession(authOptions);
 
-  if (session?.user) redirect(`/protected-page`);
+  if (session?.user) redirect(`/protected-page/`);
 
   return <RootLayout>{children}</RootLayout>;
 };

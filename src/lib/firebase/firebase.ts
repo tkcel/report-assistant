@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import type { FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
 const firebaseConfig: FirebaseOptions = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,5 +14,11 @@ const firebaseConfig: FirebaseOptions = {
 };
 
 export const firebaseApp = initializeApp(firebaseConfig);
+
+// App Checkを有効化
+initializeAppCheck(firebaseApp, {
+  provider: new ReCaptchaEnterpriseProvider(process.env.NEXT_PUBLIC_SITE_KEY as string),
+  isTokenAutoRefreshEnabled: true, // Set to true to allow auto-refresh.
+});
 
 export const firebaseAuth = getAuth(firebaseApp);
