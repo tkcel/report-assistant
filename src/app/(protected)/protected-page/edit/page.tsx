@@ -1,32 +1,180 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/app/components/common/Header";
 import { Button } from "@/components/ui/Button";
 import { useReportStore } from "@/app/store/useReportStore";
-import { exportToMarkdown } from "@/app/utils/exportReport";
-import { Download, Copy, FileText, Home, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
+import type { ReportSettings } from "@/app/types";
+import {
+  Download,
+  Copy,
+  FileText,
+  Home,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
+  Save,
+} from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useSession } from "next-auth/react";
+import {
+  createReportInFirestore,
+  updateReportInFirestore,
+  getReportFromFirestore,
+} from "@/lib/firebase/firestore-reports";
 
 export default function EditPage() {
   const router = useRouter();
-  const { theme, settings, paragraphs } = useReportStore();
+  const searchParams = useSearchParams();
+  const reportId = searchParams.get("id");
+  const { theme, settings, paragraphs, setTheme, setSettings, setParagraphs } = useReportStore();
+  const { data: session } = useSession();
   const [editedContent, setEditedContent] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [showAIOutput, setShowAIOutput] = useState(true);
+  const [currentReportId, setCurrentReportId] = useState<string | null>(reportId);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [loadedParagraphs, setLoadedParagraphs] = useState(paragraphs);
+  const [loadedTheme, setLoadedTheme] = useState(theme);
+  const [loadedSettings, setLoadedSettings] = useState(settings);
 
   useEffect(() => {
     // 段落をマークダウン形式に変換
-    if (paragraphs.length > 0) {
-      const markdown = paragraphs
+    const paragraphsToUse = loadedParagraphs.length > 0 ? loadedParagraphs : paragraphs;
+    if (paragraphsToUse.length > 0) {
+      const markdown = paragraphsToUse
         .sort((a, b) => a.order - b.order)
         .map((p) => `## ${p.title}\n\n${p.content || "[内容が生成されていません]"}`)
         .join("\n\n");
       setEditedContent(markdown);
     }
-  }, [paragraphs]);
+  }, [paragraphs, loadedParagraphs]);
+
+  // Firestoreへの初期保存またはデータ取得
+  useEffect(() => {
+    let isCancelled = false;
+
+    const initializeReport = async () => {
+      // 既に初期化中の場合は何もしない
+      if (isInitializing) return;
+      if (!session?.user?.uid) return;
+
+      const userId = session.user.uid;
+
+      // 初期化フラグを立てる
+      setIsInitializing(true);
+
+      try {
+        // 既存のレポートIDがある場合は取得（リロード時も含む）
+        if (reportId) {
+          if (isCancelled) return;
+
+          const result = await getReportFromFirestore(reportId, userId);
+          if (result.success && result.report) {
+            // Firestoreからデータを取得して表示
+            const report = result.report;
+            if (!isCancelled) {
+              setCurrentReportId(report.id);
+              // ローカルの状態を更新
+              setLoadedTheme(report.theme);
+              setLoadedSettings(report.settings as ReportSettings);
+              setLoadedParagraphs(report.paragraphs);
+              // storeも更新（リロード時のため）
+              setTheme(report.theme);
+              setSettings(report.settings as ReportSettings);
+              setParagraphs(report.paragraphs);
+
+              const markdown = report.paragraphs
+                .sort((a, b) => a.order - b.order)
+                .map((p) => `## ${p.title}\n\n${p.content || "[内容が生成されていません]"}`)
+                .join("\n\n");
+              setEditedContent(markdown);
+            }
+          }
+        } else if (!reportId && theme && paragraphs.length > 0) {
+          // 新規レポートの場合、Firestoreに保存（URLにreportIdがない場合のみ）
+          if (isCancelled) return;
+
+          const result = await createReportInFirestore(userId, {
+            theme,
+            settings,
+            paragraphs,
+            status: "completed",
+          });
+
+          if (result.success && result.reportId && !isCancelled) {
+            setCurrentReportId(result.reportId);
+            setLoadedTheme(theme);
+            setLoadedSettings(settings);
+            setLoadedParagraphs(paragraphs);
+            // URLにレポートIDを追加（リロード時の復元用）
+            router.replace(`/protected-page/edit?id=${result.reportId}`);
+          }
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsInitializing(false);
+        }
+      }
+    };
+
+    initializeReport();
+
+    // クリーンアップ関数
+    return () => {
+      isCancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.uid, reportId]); // 無限ループを防ぐため依存配列を限定
+
+  const handleSave = async () => {
+    if (!session?.user?.uid || !currentReportId) return;
+
+    setIsSaving(true);
+    setSaveSuccess(false);
+
+    try {
+      // マークダウンから段落を再構築
+      const sections = editedContent.split(/^## /m).filter(Boolean);
+      const updatedParagraphs = sections.map((section, index) => {
+        const lines = section.split("\n");
+        const title = lines[0].trim();
+        const content = lines.slice(1).join("\n").trim();
+
+        // 既存の段落データを保持しつつ、内容を更新
+        const existingParagraph =
+          displayParagraphs.find((p) => p.title === title) || displayParagraphs[index];
+
+        return {
+          ...existingParagraph,
+          title,
+          content,
+          order: index + 1,
+        };
+      });
+
+      const result = await updateReportInFirestore(currentReportId, session.user.uid, {
+        theme: displayTheme,
+        settings: displaySettings,
+        paragraphs: updatedParagraphs,
+        status: "completed",
+      });
+
+      if (result.success) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000);
+      }
+    } catch (error) {
+      console.error("保存エラー:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -78,7 +226,22 @@ export default function EditPage() {
     setCollapsedSections(newCollapsed);
   };
 
-  if (!theme || paragraphs.length === 0) {
+  // ローディング中または初期化中の表示
+  if (isInitializing || (!loadedTheme && !theme)) {
+    return (
+      <div className="w-full">
+        <Header />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <p className="text-gray-600 mb-4">レポートを読み込み中...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // データが読み込まれた後、まだ存在しない場合
+  if (!isInitializing && !loadedTheme && !theme) {
     return (
       <div className="w-full">
         <Header />
@@ -92,6 +255,11 @@ export default function EditPage() {
     );
   }
 
+  // 表示用のデータを選択（loadedデータを優先）
+  const displayTheme = loadedTheme || theme;
+  const displaySettings = loadedSettings || settings;
+  const displayParagraphs = loadedParagraphs.length > 0 ? loadedParagraphs : paragraphs;
+
   return (
     <div className="w-full">
       <Header />
@@ -99,7 +267,7 @@ export default function EditPage() {
         {/* ヘッダー部分 */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-gray-900">{theme}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{displayTheme}</h1>
             <Button variant="outline" size="sm" onClick={() => router.push("/protected-page")}>
               <Home className="h-4 w-4 mr-2" />
               ホームへ
@@ -110,21 +278,21 @@ export default function EditPage() {
           <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <span className="font-medium">言語:</span> {settings.language}
+                <span className="font-medium">言語:</span> {displaySettings.language}
               </div>
               <div>
-                <span className="font-medium">文体:</span> {settings.writingStyle}
+                <span className="font-medium">文体:</span> {displaySettings.writingStyle}
               </div>
               <div>
-                <span className="font-medium">トーン:</span> {settings.tone}
+                <span className="font-medium">トーン:</span> {displaySettings.tone}
               </div>
               <div>
-                <span className="font-medium">品質:</span> {settings.quality}
+                <span className="font-medium">品質:</span> {displaySettings.quality}
               </div>
             </div>
-            {settings.purpose && (
+            {displaySettings.purpose && (
               <div className="mt-2">
-                <span className="font-medium">目的:</span> {settings.purpose}
+                <span className="font-medium">目的:</span> {displaySettings.purpose}
               </div>
             )}
           </div>
@@ -184,13 +352,13 @@ export default function EditPage() {
           <div className={cn("space-y-4", !showAIOutput && "hidden")}>
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">AI出力結果</h2>
-              <div className="text-sm text-gray-500">{paragraphs.length} 段落</div>
+              <div className="text-sm text-gray-500">{displayParagraphs.length} 段落</div>
             </div>
 
             <div className="border rounded-lg bg-white overflow-hidden">
               <div className="h-[600px] overflow-y-auto p-6">
                 <div className="prose prose-sm max-w-none">
-                  {paragraphs
+                  {displayParagraphs
                     .sort((a, b) => a.order - b.order)
                     .map((paragraph) => (
                       <div key={paragraph.id} className="mb-6 border-b pb-4 last:border-b-0">
@@ -231,19 +399,51 @@ export default function EditPage() {
         </div>
 
         {/* アクションボタン */}
-        <div className="mt-8 flex flex-wrap gap-4 justify-center">
-          <Button onClick={handleDownloadMarkdown} className="flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            Markdownでダウンロード
-          </Button>
-          <Button
-            onClick={handleDownloadText}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            テキストでダウンロード
-          </Button>
+        <div className="mt-8 space-y-4">
+          {/* 保存ボタン */}
+          <div className="flex justify-center">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !currentReportId}
+              className={cn(
+                "flex items-center gap-2 min-w-[200px]",
+                saveSuccess && "bg-green-600 hover:bg-green-700",
+              )}
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? "保存中..." : saveSuccess ? "保存しました" : "レポートを保存"}
+            </Button>
+          </div>
+
+          {/* 区切り線 */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white px-4 text-gray-500">ダウンロード</span>
+            </div>
+          </div>
+
+          {/* ダウンロードボタン */}
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Button
+              onClick={handleDownloadMarkdown}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Markdownでダウンロード
+            </Button>
+            <Button
+              onClick={handleDownloadText}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              テキストでダウンロード
+            </Button>
+          </div>
         </div>
       </div>
     </div>

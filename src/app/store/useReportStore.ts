@@ -17,6 +17,7 @@ interface ReportStore {
   addLink: (link: ReferenceLink) => void;
   removeLink: (id: string) => void;
   updateSettings: (settings: Partial<ReportSettings>) => void;
+  setSettings: (settings: ReportSettings) => void;
   setParagraphs: (paragraphs: Paragraph[]) => void;
   addParagraph: (paragraph: Paragraph) => void;
   updateParagraph: (id: string, updates: Partial<Paragraph>) => void;
@@ -69,6 +70,8 @@ export const useReportStore = create<ReportStore>((set) => ({
     set((state) => ({
       settings: { ...state.settings, ...newSettings },
     })),
+
+  setSettings: (settings) => set({ settings }),
 
   setParagraphs: (paragraphs) => set({ paragraphs }),
 

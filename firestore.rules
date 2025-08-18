@@ -10,5 +10,26 @@ service cloud.firestore {
       // 新規作成時は、作成するユーザーのUIDと一致している必要がある
       allow create: if request.auth != null && request.auth.uid == userId;
     }
+
+    // レポートコレクションのルール
+    match /reports/{reportId} {
+      // 認証されたユーザーは自分のレポートのみ読み書きできる
+      allow read: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+      
+      // 作成時は、userIdが認証されたユーザーのUIDと一致している必要がある
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.userId;
+      
+      // 更新時は、既存のuserIdが認証されたユーザーのUIDと一致し、
+      // userIdフィールドは変更されないことを確認
+      allow update: if request.auth != null && 
+        request.auth.uid == resource.data.userId &&
+        request.auth.uid == request.resource.data.userId;
+      
+      // 削除時は、既存のuserIdが認証されたユーザーのUIDと一致している必要がある
+      allow delete: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+    }
   }
 }
