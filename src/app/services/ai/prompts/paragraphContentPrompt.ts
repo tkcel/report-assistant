@@ -190,7 +190,10 @@ export const createFullReportPrompt = (
   }
 
   const paragraphsInfo = paragraphs
-    .map((p) => `## ${p.title}\n- ID: ${p.id}\n- 説明: ${p.description}\n- 目標文字数: ${p.targetLength}文字`)
+    .map(
+      (p) =>
+        `## ${p.title}\n- ID: ${p.id}\n- 説明: ${p.description}\n- 目標文字数: ${p.targetLength}文字`,
+    )
     .join("\n\n");
 
   return `あなたは優秀な論文・レポート執筆者です。

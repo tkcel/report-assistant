@@ -164,9 +164,6 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
     links,
     paragraphs: storeParagraphs,
     setParagraphs: setStoreParagraphs,
-    addParagraph: addStoreParagraph,
-    updateParagraph: updateStoreParagraph,
-    removeParagraph: removeStoreParagraph,
   } = useReportStore();
 
   const [paragraphs, setParagraphs] = useState<Paragraph[]>(storeParagraphs);
@@ -288,10 +285,6 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
   };
 
   const generateStructure = async () => {
-    console.log("theme", theme);
-    console.log("settings", settings);
-    console.log("pdfs", pdfs);
-    console.log("links", links);
     setIsGenerating(true);
 
     try {
@@ -304,8 +297,6 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
         })),
         links: links.map((link) => link.url),
       });
-
-      console.log("response", response);
 
       setParagraphs(response.paragraphs);
       setStoreParagraphs(response.paragraphs);
@@ -337,9 +328,6 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
         })),
         links: links.map((link) => link.url),
       });
-
-      console.log("paragraphs", paragraphs);
-      console.log("response", response);
 
       // 生成された内容で段落を更新
       const updatedParagraphs = paragraphs.map((p) => {

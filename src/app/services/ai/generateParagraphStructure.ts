@@ -189,10 +189,10 @@ export async function generateParagraphStructureWithAI(
 
     // 合計文字数が5000文字を超える場合は調整
     let totalEstimatedLength = paragraphs.reduce((sum, p) => sum + p.targetLength, 0);
-    
+
     if (totalEstimatedLength > 5000) {
       const ratio = 5000 / totalEstimatedLength;
-      paragraphs = paragraphs.map(p => ({
+      paragraphs = paragraphs.map((p) => ({
         ...p,
         targetLength: Math.max(100, Math.round((p.targetLength * ratio) / 100) * 100),
       }));
@@ -232,10 +232,10 @@ export async function generateParagraphStructureMock(
 
   // 合計文字数が5000文字を超える場合は調整
   let totalEstimatedLength = paragraphs.reduce((sum, p) => sum + p.targetLength, 0);
-  
+
   if (totalEstimatedLength > 5000) {
     const ratio = 5000 / totalEstimatedLength;
-    paragraphs = paragraphs.map(p => ({
+    paragraphs = paragraphs.map((p) => ({
       ...p,
       targetLength: Math.max(100, Math.round((p.targetLength * ratio) / 100) * 100),
     }));

@@ -20,7 +20,7 @@ export const firebaseAuth = getAuth(firebaseApp);
 
 // FIREBASE_APPCHECK_DEBUG_TOKEN の定義(TypeScript用)
 declare global {
-  var FIREBASE_APPCHECK_DEBUG_TOKEN: boolean | string | undefined;
+  let FIREBASE_APPCHECK_DEBUG_TOKEN: boolean | string | undefined;
 }
 
 // AppCheck 初期化処理
@@ -31,11 +31,7 @@ if (typeof document !== "undefined") {
     isTokenAutoRefreshEnabled: true,
   });
   // AppCheck 結果 ＆ トークン確認
-  getToken(appCheck)
-    .then(() => {
-      console.log("AppCheck:Success");
-    })
-    .catch((error) => {
-      console.log(error.message);
-    });
+  getToken(appCheck).catch(() => {
+    // AppCheckのエラーは静かに処理
+  });
 }

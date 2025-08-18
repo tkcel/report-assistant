@@ -21,7 +21,7 @@ const loadingMessages = [
 export function GeneratingModal({ isOpen, totalSteps }: GeneratingModalProps) {
   const [progress, setProgress] = useState(0);
   const [currentMessage, setCurrentMessage] = useState(loadingMessages[0]);
-  const [messageIndex, setMessageIndex] = useState(0);
+  const [_messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
     if (!isOpen) {
@@ -115,20 +115,3 @@ export function GeneratingModal({ isOpen, totalSteps }: GeneratingModalProps) {
     </div>
   );
 }
-
-// Tailwind CSSのカスタムアニメーション用のスタイル
-// globals.cssに追加する必要があります
-const shimmerStyle = `
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(200%);
-  }
-}
-
-.animate-shimmer {
-  animation: shimmer 2s infinite;
-}
-`;

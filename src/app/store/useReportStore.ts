@@ -79,9 +79,7 @@ export const useReportStore = create<ReportStore>((set) => ({
 
   updateParagraph: (id, updates) =>
     set((state) => ({
-      paragraphs: state.paragraphs.map((p) =>
-        p.id === id ? { ...p, ...updates } : p,
-      ),
+      paragraphs: state.paragraphs.map((p) => (p.id === id ? { ...p, ...updates } : p)),
     })),
 
   removeParagraph: (id) =>

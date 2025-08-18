@@ -5,18 +5,8 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/app/components/common/Header";
 import { Button } from "@/components/ui/Button";
 import { useReportStore } from "@/app/store/useReportStore";
-import { downloadMarkdown, downloadText, exportToMarkdown } from "@/app/utils/exportReport";
-import {
-  Download,
-  Copy,
-  FileText,
-  Home,
-  ChevronDown,
-  ChevronUp,
-  Save,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { exportToMarkdown } from "@/app/utils/exportReport";
+import { Download, Copy, FileText, Home, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 export default function EditPage() {
