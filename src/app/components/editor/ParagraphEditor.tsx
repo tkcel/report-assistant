@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Plus,
   Trash2,
@@ -18,6 +19,7 @@ import { useReportStore } from "@/app/store/useReportStore";
 import { generateParagraphStructure } from "@/app/services/ai/generateParagraphStructure";
 import { generateFullReport } from "@/app/services/ai/generateParagraphContent";
 import { GeneratingModal } from "@/app/components/common/GeneratingModal";
+import { createReportInFirestore } from "@/lib/firebase/firestore-reports";
 import {
   DndContext,
   closestCenter,
@@ -157,6 +159,7 @@ function SortableItem({
 
 export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const {
     theme,
     settings,
@@ -164,6 +167,7 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
     links,
     paragraphs: storeParagraphs,
     setParagraphs: setStoreParagraphs,
+    resetProject,
   } = useReportStore();
 
   const [paragraphs, setParagraphs] = useState<Paragraph[]>(storeParagraphs);
@@ -314,6 +318,11 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
       return;
     }
 
+    if (!session?.user?.uid) {
+      alert("ログインが必要です");
+      return;
+    }
+
     setIsGeneratingContent(true);
 
     try {
@@ -341,11 +350,42 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
         return p;
       });
 
-      setParagraphs(updatedParagraphs);
-      setStoreParagraphs(updatedParagraphs);
+      // 初回のマークダウンを生成
+      const initialMarkdown = updatedParagraphs
+        .sort((a, b) => a.order - b.order)
+        .map((p) => `## ${p.title}\n\n${p.content || "[内容が生成されていません]"}`)
+        .join("\n\n");
 
-      // 生成完了後、編集ページへ遷移
-      router.push("/protected-page/edit");
+      // Firestoreに保存（settingsを文字列型に変換、undefinedを除外）
+      const firestoreSettings: any = {
+        language: settings.language as string,
+        writingStyle: settings.writingStyle as string,
+        tone: settings.tone as string,
+        quality: settings.quality as string,
+      };
+      
+      // purposeが存在する場合のみ追加
+      if (settings.purpose !== undefined && settings.purpose !== null && settings.purpose !== '') {
+        firestoreSettings.purpose = settings.purpose;
+      }
+      
+      const saveResult = await createReportInFirestore(session.user.uid, {
+        theme,
+        settings: firestoreSettings,
+        paragraphs: updatedParagraphs,
+        editedContent: initialMarkdown,
+        status: "completed",
+      });
+
+      if (saveResult.success && saveResult.reportId) {
+        // storeをリセット（次回の新規作成のため）
+        resetProject();
+        
+        // 生成完了後、編集ページへ遷移（レポートIDを含む）
+        router.push(`/protected-page/edit?id=${saveResult.reportId}`);
+      } else {
+        throw new Error("レポートの保存に失敗しました");
+      }
     } catch (error) {
       console.error("コンテンツ生成に失敗しました:", error);
       alert("コンテンツの生成に失敗しました。もう一度お試しください。");

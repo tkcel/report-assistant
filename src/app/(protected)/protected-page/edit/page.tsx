@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/app/components/common/Header";
 import { Button } from "@/components/ui/Button";
@@ -43,23 +43,17 @@ export default function EditPage() {
   const [loadedTheme, setLoadedTheme] = useState(theme);
   const [loadedSettings, setLoadedSettings] = useState(settings);
 
-  useEffect(() => {
-    // 段落をマークダウン形式に変換
-    const paragraphsToUse = loadedParagraphs.length > 0 ? loadedParagraphs : paragraphs;
-    if (paragraphsToUse.length > 0) {
-      const markdown = paragraphsToUse
-        .sort((a, b) => a.order - b.order)
-        .map((p) => `## ${p.title}\n\n${p.content || "[内容が生成されていません]"}`)
-        .join("\n\n");
-      setEditedContent(markdown);
-    }
-  }, [paragraphs, loadedParagraphs]);
-
-  // Firestoreへの初期保存またはデータ取得
+  // Firestoreからのデータ取得（編集のみ、新規作成はしない）
   useEffect(() => {
     let isCancelled = false;
 
-    const initializeReport = async () => {
+    const loadReport = async () => {
+      // レポートIDがない場合はエラー
+      if (!reportId) {
+        console.error("レポートIDが指定されていません");
+        return;
+      }
+
       // 既に初期化中の場合は何もしない
       if (isInitializing) return;
       if (!session?.user?.uid) return;
@@ -70,25 +64,29 @@ export default function EditPage() {
       setIsInitializing(true);
 
       try {
-        // 既存のレポートIDがある場合は取得（リロード時も含む）
-        if (reportId) {
-          if (isCancelled) return;
+        if (isCancelled) return;
 
-          const result = await getReportFromFirestore(reportId, userId);
-          if (result.success && result.report) {
-            // Firestoreからデータを取得して表示
-            const report = result.report;
-            if (!isCancelled) {
-              setCurrentReportId(report.id);
-              // ローカルの状態を更新
-              setLoadedTheme(report.theme);
-              setLoadedSettings(report.settings as ReportSettings);
-              setLoadedParagraphs(report.paragraphs);
-              // storeも更新（リロード時のため）
-              setTheme(report.theme);
-              setSettings(report.settings as ReportSettings);
-              setParagraphs(report.paragraphs);
+        const result = await getReportFromFirestore(reportId, userId);
+        if (result.success && result.report) {
+          // Firestoreからデータを取得して表示
+          const report = result.report;
+          if (!isCancelled) {
+            setCurrentReportId(report.id);
+            // ローカルの状態を更新
+            setLoadedTheme(report.theme);
+            setLoadedSettings(report.settings as ReportSettings);
+            setLoadedParagraphs(report.paragraphs);
+            // storeも更新（リロード時のため）
+            setTheme(report.theme);
+            setSettings(report.settings as ReportSettings);
+            setParagraphs(report.paragraphs);
 
+            // 編集内容を優先的に使用
+            // editedContentが存在する場合は必ずそれを使用（再編集時の内容保持）
+            if (report.editedContent !== undefined && report.editedContent !== null) {
+              setEditedContent(report.editedContent);
+            } else {
+              // editedContentがない場合のみ、paragraphsから生成
               const markdown = report.paragraphs
                 .sort((a, b) => a.order - b.order)
                 .map((p) => `## ${p.title}\n\n${p.content || "[内容が生成されていません]"}`)
@@ -96,25 +94,8 @@ export default function EditPage() {
               setEditedContent(markdown);
             }
           }
-        } else if (!reportId && theme && paragraphs.length > 0) {
-          // 新規レポートの場合、Firestoreに保存（URLにreportIdがない場合のみ）
-          if (isCancelled) return;
-
-          const result = await createReportInFirestore(userId, {
-            theme,
-            settings,
-            paragraphs,
-            status: "completed",
-          });
-
-          if (result.success && result.reportId && !isCancelled) {
-            setCurrentReportId(result.reportId);
-            setLoadedTheme(theme);
-            setLoadedSettings(settings);
-            setLoadedParagraphs(paragraphs);
-            // URLにレポートIDを追加（リロード時の復元用）
-            router.replace(`/protected-page/edit?id=${result.reportId}`);
-          }
+        } else {
+          console.error("レポートの取得に失敗しました");
         }
       } finally {
         if (!isCancelled) {
@@ -123,7 +104,7 @@ export default function EditPage() {
       }
     };
 
-    initializeReport();
+    loadReport();
 
     // クリーンアップ関数
     return () => {
@@ -139,30 +120,10 @@ export default function EditPage() {
     setSaveSuccess(false);
 
     try {
-      // マークダウンから段落を再構築
-      const sections = editedContent.split(/^## /m).filter(Boolean);
-      const updatedParagraphs = sections.map((section, index) => {
-        const lines = section.split("\n");
-        const title = lines[0].trim();
-        const content = lines.slice(1).join("\n").trim();
-
-        // 既存の段落データを保持しつつ、内容を更新
-        const existingParagraph =
-          displayParagraphs.find((p) => p.title === title) || displayParagraphs[index];
-
-        return {
-          ...existingParagraph,
-          title,
-          content,
-          order: index + 1,
-        };
-      });
-
+      // 編集内容をそのまま保存（パラグラフは元のまま保持）
       const result = await updateReportInFirestore(currentReportId, session.user.uid, {
-        theme: displayTheme,
-        settings: displaySettings,
-        paragraphs: updatedParagraphs,
-        status: "completed",
+        editedContent: editedContent,  // 編集したマークダウンを保存
+        // paragraphsは更新しない（AI生成結果を保持）
       });
 
       if (result.success) {
@@ -191,7 +152,7 @@ export default function EditPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${theme.replace(/[^a-zA-Z0-9ぁ-んァ-ヶー一-龯]/g, "_")}_${new Date().toISOString().split("T")[0]}.md`;
+    link.download = `${displayTheme.replace(/[^a-zA-Z0-9ぁ-んァ-ヶー一-龯]/g, "_")}_${new Date().toISOString().split("T")[0]}.md`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -209,7 +170,7 @@ export default function EditPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${theme.replace(/[^a-zA-Z0-9ぁ-んァ-ヶー一-龯]/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`;
+    link.download = `${displayTheme.replace(/[^a-zA-Z0-9ぁ-んァ-ヶー一-龯]/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -225,6 +186,21 @@ export default function EditPage() {
     }
     setCollapsedSections(newCollapsed);
   };
+
+  // レポートIDがない場合のエラー表示
+  if (!reportId) {
+    return (
+      <div className="w-full">
+        <Header />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <p className="text-gray-600 mb-4">レポートIDが指定されていません</p>
+            <Button onClick={() => router.push("/protected-page")}>ホームに戻る</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ローディング中または初期化中の表示
   if (isInitializing || (!loadedTheme && !theme)) {

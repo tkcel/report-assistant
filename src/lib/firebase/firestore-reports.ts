@@ -29,7 +29,8 @@ export interface FirestoreReport {
     quality: string;
     purpose?: string;
   };
-  paragraphs: Paragraph[];
+  paragraphs: Paragraph[];  // AI生成された元のパラグラフ
+  editedContent?: string;   // ユーザーが編集したマークダウン内容
   createdAt: Timestamp | Date;
   updatedAt: Timestamp | Date;
   status: "draft" | "generating" | "completed";
