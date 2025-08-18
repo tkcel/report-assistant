@@ -182,7 +182,7 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
           title: "序論",
           description: "レポートの背景と目的を説明",
           content: "",
-          targetLength: 500,
+          targetLength: 200,
         },
         {
           id: "2",
@@ -190,7 +190,7 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
           title: "本論",
           description: "主要な論点と分析",
           content: "",
-          targetLength: 1500,
+          targetLength: 400,
         },
         {
           id: "3",
@@ -198,7 +198,7 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
           title: "結論",
           description: "まとめと今後の展望",
           content: "",
-          targetLength: 500,
+          targetLength: 200,
         },
       ];
       setParagraphs(defaultParagraphs);
@@ -266,7 +266,7 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
       title: `段落 ${paragraphs.length + 1}`,
       description: "",
       content: "",
-      targetLength: 500,
+      targetLength: 300,
     };
     const newParagraphs = [...paragraphs, newParagraph];
     setParagraphs(newParagraphs);
@@ -338,6 +338,9 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
         links: links.map((link) => link.url),
       });
 
+      console.log("paragraphs", paragraphs);
+      console.log("response", response);
+
       // 生成された内容で段落を更新
       const updatedParagraphs = paragraphs.map((p) => {
         const generated = response.paragraphs.find((g) => g.id === p.id);
@@ -373,19 +376,19 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
             <span
               className={cn(
                 "text-sm font-bold",
-                totalTargetLength > 30000 ? "text-red-500" : "text-gray-700",
+                totalTargetLength > 5000 ? "text-red-500" : "text-gray-700",
               )}
             >
-              目標: {totalTargetLength.toLocaleString()} / 30,000文字
+              目標: {totalTargetLength.toLocaleString()} / 5,000文字
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className={cn(
                 "h-2 rounded-full transition-all",
-                totalTargetLength > 30000 ? "bg-red-500" : "bg-primary",
+                totalTargetLength > 5000 ? "bg-red-500" : "bg-primary",
               )}
-              style={{ width: `${Math.min((totalTargetLength / 30000) * 100, 100)}%` }}
+              style={{ width: `${Math.min((totalTargetLength / 5000) * 100, 100)}%` }}
             />
           </div>
           {totalActualLength > 0 && (

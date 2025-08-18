@@ -176,9 +176,28 @@ export async function generateFullReportWithAI(
     const response = result.response;
     const text = response.text();
 
-    // JSONレスポンスをパース
-    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
-    const jsonString = jsonMatch ? jsonMatch[1] : text;
+    // JSONレスポンスをパース（Markdownコードブロックを除去）
+    let jsonString = text;
+
+    // ```json ... ``` 形式を除去
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      jsonString = jsonMatch[1];
+    }
+
+    // 先頭と末尾の空白を除去
+    jsonString = jsonString.trim();
+
+    // JSONとして無効な文字が先頭にある場合は除去
+    if (jsonString.startsWith("`")) {
+      jsonString = jsonString.replace(/^`+/, "").replace(/`+$/, "");
+    }
+
+    // "json" という文字列が先頭にある場合は除去
+    if (jsonString.startsWith("json")) {
+      jsonString = jsonString.substring(4).trim();
+    }
+
     const parsed = JSON.parse(jsonString);
 
     if (parsed.paragraphs && Array.isArray(parsed.paragraphs)) {
@@ -190,36 +209,53 @@ export async function generateFullReportWithAI(
     throw new Error("Invalid response format");
   } catch (error) {
     console.error("AI generation failed:", error);
-    // エラー時は各段落を個別に生成
+    // エラー時は各段落を個別に生成（前後の文脈を保持）
     const generatedParagraphs = [];
-    for (const paragraph of paragraphs) {
+    const updatedParagraphs = [...paragraphs];
+
+    for (let i = 0; i < paragraphs.length; i++) {
+      const paragraph = paragraphs[i];
+
       try {
         const result = await generateParagraphContentWithAI({
           theme,
           settings,
           paragraph,
-          allParagraphs: paragraphs,
+          allParagraphs: updatedParagraphs,
           pdfs,
           links,
         });
+
         generatedParagraphs.push({
           id: paragraph.id,
           content: result.content,
         });
+
+        // 次の段落生成時のコンテキストのために更新
+        updatedParagraphs[i] = {
+          ...paragraph,
+          content: result.content,
+        };
       } catch (err) {
         // 個別エラー時はモックを使用
         const mockResult = await generateParagraphContentMock({
           theme,
           settings,
           paragraph,
-          allParagraphs: paragraphs,
+          allParagraphs: updatedParagraphs,
           pdfs,
           links,
         });
+
         generatedParagraphs.push({
           id: paragraph.id,
           content: mockResult.content,
         });
+
+        updatedParagraphs[i] = {
+          ...paragraph,
+          content: mockResult.content,
+        };
       }
     }
     return {

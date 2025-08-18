@@ -119,16 +119,31 @@ const generateParagraphTitleAndDescription = (
 
 const calculateTargetLength = (quality: Quality, targetLengthWeight: number): number => {
   const qualityMultiplier = getQualityMultiplier(quality);
-  const baseLength = 500;
+  const baseLength = 100; // 単位文字数を100に変更
 
-  return Math.round(baseLength * targetLengthWeight * qualityMultiplier);
+  // 100文字単位で計算し、100の倍数に丸める
+  const calculatedLength = baseLength * targetLengthWeight * qualityMultiplier;
+  return Math.round(calculatedLength / 100) * 100;
 };
 
 const parseAIResponse = (responseText: string): ParagraphStructureItem[] => {
   try {
-    // JSONコードブロックを抽出
-    const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
-    const jsonString = jsonMatch ? jsonMatch[1] : responseText;
+    // JSONレスポンスをパース（Markdownコードブロックを除去）
+    let jsonString = responseText;
+
+    // ```json ... ``` 形式を除去
+    const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      jsonString = jsonMatch[1];
+    }
+
+    // 先頭と末尾の空白を除去
+    jsonString = jsonString.trim();
+
+    // JSONとして無効な文字が先頭にある場合は除去
+    if (jsonString.startsWith("`")) {
+      jsonString = jsonString.replace(/^`+/, "").replace(/`+$/, "");
+    }
 
     const parsed = JSON.parse(jsonString);
 
@@ -161,7 +176,7 @@ export async function generateParagraphStructureWithAI(
     const paragraphStructure = parseAIResponse(text);
 
     // Paragraph型に変換
-    const paragraphs: Paragraph[] = paragraphStructure.map(
+    let paragraphs: Paragraph[] = paragraphStructure.map(
       ({ title, description, targetLengthWeight }, index) => ({
         id: `generated-${Date.now()}-${index}`,
         order: index + 1,
@@ -172,7 +187,17 @@ export async function generateParagraphStructureWithAI(
       }),
     );
 
-    const totalEstimatedLength = paragraphs.reduce((sum, p) => sum + p.targetLength, 0);
+    // 合計文字数が5000文字を超える場合は調整
+    let totalEstimatedLength = paragraphs.reduce((sum, p) => sum + p.targetLength, 0);
+    
+    if (totalEstimatedLength > 5000) {
+      const ratio = 5000 / totalEstimatedLength;
+      paragraphs = paragraphs.map(p => ({
+        ...p,
+        targetLength: Math.max(100, Math.round((p.targetLength * ratio) / 100) * 100),
+      }));
+      totalEstimatedLength = paragraphs.reduce((sum, p) => sum + p.targetLength, 0);
+    }
 
     return {
       paragraphs,
@@ -194,7 +219,7 @@ export async function generateParagraphStructureMock(
   const { theme, settings } = request;
   const titleAndDescription = generateParagraphTitleAndDescription(theme, settings.quality);
 
-  const paragraphs: Paragraph[] = titleAndDescription.map(
+  let paragraphs: Paragraph[] = titleAndDescription.map(
     ({ title, description, targetLengthWeight }, index) => ({
       id: `generated-${Date.now()}-${index}`,
       order: index + 1,
@@ -205,7 +230,17 @@ export async function generateParagraphStructureMock(
     }),
   );
 
-  const totalEstimatedLength = paragraphs.reduce((sum, p) => sum + p.targetLength, 0);
+  // 合計文字数が5000文字を超える場合は調整
+  let totalEstimatedLength = paragraphs.reduce((sum, p) => sum + p.targetLength, 0);
+  
+  if (totalEstimatedLength > 5000) {
+    const ratio = 5000 / totalEstimatedLength;
+    paragraphs = paragraphs.map(p => ({
+      ...p,
+      targetLength: Math.max(100, Math.round((p.targetLength * ratio) / 100) * 100),
+    }));
+    totalEstimatedLength = paragraphs.reduce((sum, p) => sum + p.targetLength, 0);
+  }
 
   return {
     paragraphs,

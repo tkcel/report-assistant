@@ -25,10 +25,20 @@ export const createParagraphContentPrompt = (
     })
     .join("\n");
 
-  // 既に生成された内容のサマリー
+  // 既に生成された内容のコンテキスト
   const previousContentContext =
     previousContent && previousContent.length > 0
-      ? `\n# 既に書かれた内容\n${previousContent.map((content, i) => `段落${i + 1}: ${content.substring(0, 200)}...`).join("\n")}`
+      ? `\n# 既に書かれた内容（前の段落）\n${previousContent
+          .map((content, i) => {
+            const paragraphInfo = allParagraphs[i];
+            // 最後の段落は全文、それ以外は説明文を使用
+            if (i === previousContent.length - 1) {
+              return `【${paragraphInfo.title}】\n${content}`;
+            } else {
+              return `【${paragraphInfo.title}】\n概要: ${paragraphInfo.description}`;
+            }
+          })
+          .join("\n\n")}`
       : "";
 
   // 参考資料の情報
@@ -65,10 +75,13 @@ ${previousContentContext}
 1. ${writingStyleInstruction}
 2. 論理的で一貫性のある内容にしてください
 3. 前後の段落との繋がりを意識してください
+   ${previousContent && previousContent.length > 0 ? "- 前の段落から自然に繋がるように書き始めてください" : ""}
+   ${currentIndex < allParagraphs.length - 1 ? "- 次の段落へ自然に繋がるように終わらせてください" : ""}
 4. 具体例や根拠を適切に含めてください
 5. 目標文字数に近い長さで執筆してください（極端に短くしたり長くしたりしないでください）
 6. ${paragraph.order === 1 ? "導入として読者の興味を引く内容にしてください" : ""}
 7. ${paragraph.order === allParagraphs.length ? "結論として全体をまとめ、今後の展望を示してください" : ""}
+8. 前の段落で述べた内容と重複しないよう、新しい視点や情報を追加してください
 
 # 出力形式
 段落の内容のみを出力してください。タイトルや番号は不要です。
@@ -177,7 +190,7 @@ export const createFullReportPrompt = (
   }
 
   const paragraphsInfo = paragraphs
-    .map((p) => `## ${p.title}\n- 説明: ${p.description}\n- 目標文字数: ${p.targetLength}文字`)
+    .map((p) => `## ${p.title}\n- ID: ${p.id}\n- 説明: ${p.description}\n- 目標文字数: ${p.targetLength}文字`)
     .join("\n\n");
 
   return `あなたは優秀な論文・レポート執筆者です。
@@ -193,6 +206,8 @@ ${settings.purpose ? `- 目的: ${settings.purpose}` : ""}
 ${contextInfo.length > 0 ? `\n# 参考資料\n${contextInfo.join("\n")}` : ""}
 
 # レポート構成と要件
+以下の段落を順番に執筆してください。各段落のIDは変更せず、そのまま使用してください：
+
 ${paragraphsInfo}
 
 # 執筆要件
@@ -203,17 +218,22 @@ ${paragraphsInfo}
 5. 導入で読者の興味を引き、結論で全体をまとめてください
 
 # 出力形式
-以下のJSON形式で出力してください：
+以下のJSON形式で出力してください。**必ず各段落に指定されたIDを正確に使用してください**：
 \`\`\`json
 {
   "paragraphs": [
     {
-      "id": "段落ID",
+      "id": "（例: generated-1234567890-0 など、上記で指定されたIDをそのまま）",
       "content": "段落の内容"
     }
   ]
 }
 \`\`\`
+
+**重要**: 
+- 各段落のIDは、上記の「レポート構成と要件」セクションで指定されたIDと必ず一致させてください
+- IDを変更したり、新しいIDを作成したりしないでください
+- 指定された全ての段落を含めてください
 
 ${languageInstruction}
 
