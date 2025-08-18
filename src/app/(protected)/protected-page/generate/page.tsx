@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { StepIndicator } from "@/app/components/common/StepIndicator";
 import { ThemeInput } from "@/app/components/editor/ThemeInput";
 import { SettingsForm } from "@/app/components/editor/SettingsForm";
@@ -8,7 +9,12 @@ import { Header } from "@/app/components/common/Header";
 import { useReportStore } from "@/app/store/useReportStore";
 
 const GeneratePage = () => {
-  const { currentStep, nextStep, prevStep } = useReportStore();
+  const { currentStep, nextStep, prevStep, resetProject } = useReportStore();
+
+  useEffect(() => {
+    // ページロード時にstoreをリセット（新規作成として開始）
+    resetProject();
+  }, [resetProject]);
 
   return (
     <div className="w-full">

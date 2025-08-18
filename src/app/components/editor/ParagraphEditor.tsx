@@ -363,12 +363,12 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
         tone: settings.tone as string,
         quality: settings.quality as string,
       };
-      
+
       // purposeが存在する場合のみ追加
-      if (settings.purpose !== undefined && settings.purpose !== null && settings.purpose !== '') {
+      if (settings.purpose !== undefined && settings.purpose !== null && settings.purpose !== "") {
         firestoreSettings.purpose = settings.purpose;
       }
-      
+
       const saveResult = await createReportInFirestore(session.user.uid, {
         theme,
         settings: firestoreSettings,
@@ -379,8 +379,15 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
 
       if (saveResult.success && saveResult.reportId) {
         // storeをリセット（次回の新規作成のため）
-        resetProject();
-        
+        // resetProjectを確実に実行してから画面遷移
+        await new Promise<void>((resolve) => {
+          resetProject();
+          // stateの更新を確実に反映させるため、少し待機
+          setTimeout(() => {
+            resolve();
+          }, 100);
+        });
+
         // 生成完了後、編集ページへ遷移（レポートIDを含む）
         router.push(`/protected-page/edit?id=${saveResult.reportId}`);
       } else {
