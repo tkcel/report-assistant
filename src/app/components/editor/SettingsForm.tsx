@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup";
@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import type { Language, WritingStyle, Tone, Quality } from "@/app/types";
+import { useReportStore } from "@/app/store/useReportStore";
 
 interface SettingsFormProps {
   onBack: () => void;
@@ -19,11 +20,50 @@ interface SettingsFormProps {
 }
 
 export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
-  const [language, setLanguage] = useState<Language>("日本語");
-  const [writingStyle, setWritingStyle] = useState<WritingStyle>("常体");
-  const [tone, setTone] = useState<Tone>("フォーマル");
-  const [quality, setQuality] = useState<Quality>("中レベル");
-  const [purpose, setPurpose] = useState("");
+  const { settings, updateSettings } = useReportStore();
+
+  const [language, setLanguage] = useState<Language>(settings.language);
+  const [writingStyle, setWritingStyle] = useState<WritingStyle>(settings.writingStyle);
+  const [tone, setTone] = useState<Tone>(settings.tone);
+  const [quality, setQuality] = useState<Quality>(settings.quality);
+  const [purpose, setPurpose] = useState(settings.purpose || "");
+
+  useEffect(() => {
+    setLanguage(settings.language);
+    setWritingStyle(settings.writingStyle);
+    setTone(settings.tone);
+    setQuality(settings.quality);
+    setPurpose(settings.purpose || "");
+  }, [settings]);
+
+  const handleLanguageChange = (value: Language) => {
+    setLanguage(value);
+    updateSettings({ language: value });
+  };
+
+  const handleWritingStyleChange = (value: WritingStyle) => {
+    setWritingStyle(value);
+    updateSettings({ writingStyle: value });
+  };
+
+  const handleToneChange = (value: Tone) => {
+    setTone(value);
+    updateSettings({ tone: value });
+  };
+
+  const handleQualityChange = (value: Quality) => {
+    setQuality(value);
+    updateSettings({ quality: value });
+  };
+
+  const handlePurposeChange = (value: string) => {
+    setPurpose(value);
+    updateSettings({ purpose: value });
+  };
+
+  const handleNext = () => {
+    onNext();
+  };
 
   return (
     <div className="space-y-6">
@@ -33,7 +73,10 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium mb-3">言語設定</label>
-            <RadioGroup value={language} onValueChange={(value) => setLanguage(value as Language)}>
+            <RadioGroup
+              value={language}
+              onValueChange={(value) => handleLanguageChange(value as Language)}
+            >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="日本語" id="japanese" />
                 <label
@@ -59,7 +102,7 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
             <label className="block text-sm font-medium mb-3">文体設定</label>
             <RadioGroup
               value={writingStyle}
-              onValueChange={(value) => setWritingStyle(value as WritingStyle)}
+              onValueChange={(value) => handleWritingStyleChange(value as WritingStyle)}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="常体" id="jotai" />
@@ -84,7 +127,7 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
 
           <div>
             <label className="block text-sm font-medium mb-3">口調設定</label>
-            <Select value={tone} onValueChange={(value) => setTone(value as Tone)}>
+            <Select value={tone} onValueChange={(value) => handleToneChange(value as Tone)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="口調を選択" />
               </SelectTrigger>
@@ -100,7 +143,10 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
 
           <div>
             <label className="block text-sm font-medium mb-3">品質設定</label>
-            <RadioGroup value={quality} onValueChange={(value) => setQuality(value as Quality)}>
+            <RadioGroup
+              value={quality}
+              onValueChange={(value) => handleQualityChange(value as Quality)}
+            >
               <div className="space-y-3">
                 <div className="flex items-start space-x-2">
                   <RadioGroupItem value="高レベル" id="high" className="mt-1" />
@@ -152,7 +198,7 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
             <label className="block text-sm font-medium mb-2">目的設定（任意）</label>
             <Textarea
               value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
+              onChange={(e) => handlePurposeChange(e.target.value)}
               placeholder="レポートの目的や想定読者を記入してください（任意）"
               className="min-h-[100px]"
               maxLength={256}
@@ -166,7 +212,7 @@ export function SettingsForm({ onBack, onNext }: SettingsFormProps) {
         <Button onClick={onBack} variant="outline">
           戻る
         </Button>
-        <Button onClick={onNext}>次へ進む</Button>
+        <Button onClick={handleNext}>次へ進む</Button>
       </div>
     </div>
   );

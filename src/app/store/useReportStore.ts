@@ -8,6 +8,7 @@ interface ReportStore {
   links: ReferenceLink[];
   settings: ReportSettings;
   paragraphs: Paragraph[];
+  currentStep: number;
 
   // Actions
   setTheme: (theme: string) => void;
@@ -20,6 +21,9 @@ interface ReportStore {
   addParagraph: (paragraph: Paragraph) => void;
   updateParagraph: (id: string, updates: Partial<Paragraph>) => void;
   removeParagraph: (id: string) => void;
+  setCurrentStep: (step: number) => void;
+  nextStep: () => void;
+  prevStep: () => void;
   resetProject: () => void;
 }
 
@@ -37,6 +41,7 @@ export const useReportStore = create<ReportStore>((set) => ({
   links: [],
   settings: defaultSettings,
   paragraphs: [],
+  currentStep: 1,
 
   setTheme: (theme) => set({ theme }),
 
@@ -84,6 +89,18 @@ export const useReportStore = create<ReportStore>((set) => ({
       paragraphs: state.paragraphs.filter((p) => p.id !== id),
     })),
 
+  setCurrentStep: (step) => set({ currentStep: step }),
+
+  nextStep: () =>
+    set((state) => ({
+      currentStep: Math.min(state.currentStep + 1, 3),
+    })),
+
+  prevStep: () =>
+    set((state) => ({
+      currentStep: Math.max(state.currentStep - 1, 1),
+    })),
+
   resetProject: () =>
     set({
       currentProject: null,
@@ -92,5 +109,6 @@ export const useReportStore = create<ReportStore>((set) => ({
       links: [],
       settings: defaultSettings,
       paragraphs: [],
+      currentStep: 1,
     }),
 }));

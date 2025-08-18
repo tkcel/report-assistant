@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus,
   Trash2,
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
 import type { Paragraph } from "@/app/types";
+import { useReportStore } from "@/app/store/useReportStore";
 import {
   DndContext,
   closestCenter,
@@ -161,45 +162,67 @@ function SortableItem({
 }
 
 export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
-  const [paragraphs, setParagraphs] = useState<Paragraph[]>([
-    {
-      id: "1",
-      order: 1,
-      title: "序論",
-      description: "レポートの背景と目的を説明",
-      content: "",
-      targetLength: 500,
-      actualLength: 0,
-      status: "draft",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "2",
-      order: 2,
-      title: "本論",
-      description: "主要な論点と分析",
-      content: "",
-      targetLength: 1500,
-      actualLength: 0,
-      status: "draft",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "3",
-      order: 3,
-      title: "結論",
-      description: "まとめと今後の展望",
-      content: "",
-      targetLength: 500,
-      actualLength: 0,
-      status: "draft",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ]);
+  const {
+    paragraphs: storeParagraphs,
+    setParagraphs: setStoreParagraphs,
+    addParagraph: addStoreParagraph,
+    updateParagraph: updateStoreParagraph,
+    removeParagraph: removeStoreParagraph,
+  } = useReportStore();
+
+  const [paragraphs, setParagraphs] = useState<Paragraph[]>(storeParagraphs);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    if (storeParagraphs.length === 0) {
+      const defaultParagraphs: Paragraph[] = [
+        {
+          id: "1",
+          order: 1,
+          title: "序論",
+          description: "レポートの背景と目的を説明",
+          content: "",
+          targetLength: 500,
+          actualLength: 0,
+          status: "draft",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "2",
+          order: 2,
+          title: "本論",
+          description: "主要な論点と分析",
+          content: "",
+          targetLength: 1500,
+          actualLength: 0,
+          status: "draft",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: "3",
+          order: 3,
+          title: "結論",
+          description: "まとめと今後の展望",
+          content: "",
+          targetLength: 500,
+          actualLength: 0,
+          status: "draft",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+      setParagraphs(defaultParagraphs);
+      setStoreParagraphs(defaultParagraphs);
+    } else {
+      setParagraphs(storeParagraphs);
+    }
+  }, [storeParagraphs, setStoreParagraphs]);
+
+  useEffect(() => {
+    setStoreParagraphs(paragraphs);
+  }, [paragraphs, setStoreParagraphs]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -261,7 +284,8 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    setParagraphs([...paragraphs, newParagraph]);
+    const newParagraphs = [...paragraphs, newParagraph];
+    setParagraphs(newParagraphs);
   };
 
   const removeParagraph = (id: string) => {
@@ -275,9 +299,10 @@ export function ParagraphEditor({ onBack }: ParagraphEditorProps) {
   };
 
   const updateParagraph = (id: string, updates: Partial<Paragraph>) => {
-    setParagraphs(
-      paragraphs.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: new Date() } : p)),
+    const updatedParagraphs = paragraphs.map((p) =>
+      p.id === id ? { ...p, ...updates, updatedAt: new Date() } : p,
     );
+    setParagraphs(updatedParagraphs);
   };
 
   const generateStructure = async () => {
